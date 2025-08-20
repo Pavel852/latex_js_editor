@@ -1,0 +1,110 @@
+:root[data-theme="light"] {
+  --bg:#f7f9fc; --fg:#10151c; --muted:#5b6570; --card:#ffffff; --accent:#2a66ff; --border:#dbe1ea;
+  --theme: 'light';
+}
+:root[data-theme="dark"]{
+  --bg: #0b0d12;
+  --fg: #e8ecf1;
+  --muted:#9aa4af;
+  --card:#121722;
+  --accent:#4f8dff;
+  --border:#222a39;
+  --theme: 'dark';
+}
+*{ box-sizing: border-box }
+html, body { height: 100% }
+body{
+  margin:0; font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: var(--bg); color: var(--fg);
+  transition: background-color 0.3s, color 0.3s;
+}
+header{ display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,var(--card),transparent); position:sticky; top:0; z-index:5 }
+header h1{ font-size:18px; margin:0; letter-spacing:.2px }
+header .actions{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap }
+.btn{ appearance:none; border:1px solid var(--border); background:var(--card); color:var(--fg); padding:8px 10px; border-radius:12px; cursor:pointer; transition:.15s ease; font-weight:600 }
+.btn:hover{ border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent) }
+.btn.ghost{ background:transparent }
+.btn[disabled]{ opacity:.5; cursor:not-allowed }
+
+.wrap{ display:grid; grid-template-columns: 320px 1fr; gap:16px; padding:16px; }
+.panel{ background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:clip }
+.panel h2{ margin:0; padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; letter-spacing:.3px; color:var(--muted); text-transform:uppercase }
+.panel .content{ padding:12px }
+
+.palette{ display:grid; grid-template-columns: repeat(3, 1fr); gap:8px }
+.token{ user-select:none; text-align:center; padding:8px; border:1px dashed var(--border); border-radius:12px; background: color-mix(in oklab, var(--card) 85%, var(--fg) 3%);
+  cursor:grab; transition:.15s; font-size:13px }
+.token:hover{ border-color:var(--accent) }
+.token:active{ cursor:grabbing }
+
+.editor{ display:flex; gap:16px; align-items:flex-start; }
+.editor .left{ flex:1; min-width:260px; display:flex; flex-direction:column; gap:10px }
+.toolbar{ display:flex; flex-wrap:wrap; gap:8px }
+.toolbar .btn{ padding:6px 8px; font-size:13px }
+
+textarea#latex{ width:100%; min-height:220px; resize:vertical; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:12px; padding:12px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+.preview{ width:100%; min-height:220px; border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; align-items:center; justify-content:center; background: var(--card); color:var(--fg); }
+.preview .msg{ color:var(--muted); font-size:13px }
+
+.grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px }
+
+.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+label{ color: var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.3px }
+input[type="text"], input[type="number"], input[type="color"], select{
+  background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:10px; padding:7px 9px; font: inherit
+}
+.small{ font-size:12px; color:var(--muted) }
+.notice{ background: color-mix(in oklab, var(--accent) 14%, transparent); border-left:3px solid var(--accent); padding:10px 12px; border-radius:10px; font-size:12px }
+
+.sidebar{ display:flex; flex-direction:column; gap:16px }
+
+footer{ padding:12px 16px; color:var(--muted) }
+
+.topmenu{ display:flex; gap:8px; align-items:center; margin:6px 0 10px 0; flex-wrap:wrap }
+details.dropdown{ position:relative }
+details.dropdown > summary{ list-style:none; cursor:pointer; padding:6px 8px; border:1px solid var(--border); border-radius:10px; background: var(--card) }
+details.dropdown[open] > summary{ outline:1px dashed var(--accent) }
+details.dropdown .dropdown-grid{ position:absolute; z-index:99; top:110%; left:0; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px; display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; max-width:700px; box-shadow: 0 10px 30px rgba(0,0,0,.3) }
+.dropdown-grid .gk{ user-select:none; text-align:center; padding:12px 8px; border:1px solid var(--border); border-radius:10px; background: color-mix(in oklab, var(--card) 85%, var(--fg) 3%); cursor:pointer; min-width: 120px; min-height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.dropdown-grid .gk:hover{ border-color: var(--accent) }
+
+/* Nové styly pro chemické, fyzikální a elektrotechnické vzorce */
+#chemGrid, #physicsGrid, #electroGrid { 
+  grid-template-columns: repeat(3, 1fr) !important; 
+  max-width: 700px !important;
+}
+
+/* Styly pro řeckou abecedu - menší tlačítka */
+#greekGrid {
+  grid-template-columns: repeat(6, 1fr) !important;
+  max-width: 500px !important;
+}
+#greekGrid .gk {
+  padding: 6px 4px !important;
+  min-width: 50px !important;
+  min-height: 40px !important;
+  font-size: 16px;
+}
+
+/* Tlačítko pro změnu motivu a jazyka */
+#themeToggle, #languageToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 20px;
+}
+
+.chem-symbol {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+.chem-name {
+  font-size: 12px;
+  opacity: 0.8;
+  line-height: 1.2;
+}

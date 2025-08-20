@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="cs" data-theme="light" data-lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="version" content="1.7">
+  <meta name="author" content="PB">
+  <title>LaTeX Builder – editor vzorců</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1 data-i18n="appTitle">LaTeX Builder <span class="small" style="font-weight:400;color:var(--muted)">v1.7 · PB</span></h1>
+    <div class="actions">
+      <button class="btn" id="copyLatex" data-i18n="copyLatex">Kopírovat LaTeX</button>
+      <button class="btn ghost" id="clear" data-i18n="clear">Vymazat</button>
+      <button class="btn" id="languageToggle" type="button">EN</button>
+      <button class="btn" id="themeToggle" type="button">🌙</button>
+      <button class="btn" id="btnAbout" type="button" data-i18n="about">About</button>
+      <button class="btn" id="btnLoad" type="button" data-i18n="load">Load (.json)</button>
+      <button class="btn" id="btnSave" type="button" data-i18n="save">Save (.json)</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <aside class="panel sidebar" aria-label="Paleta prvků">
+      <div>
+        <h2 data-i18n="paletteTitle">Paleta (táhni & pusť)</h2>
+        <div class="content">
+          <div class="palette" id="palette"></div>
+          <p class="small" style="margin-top:8px" data-i18n="paletteTip">Tip: přetáhni prvek do editoru nebo klikni pro vložení. Znak ◻ označuje místo pro dopsání.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="exportTitle">Export</h2>
+        <div class="content">
+          <div class="row">
+            <label for="scale" data-i18n="scaleLabel">Měřítko PNG</label>
+            <input type="number" id="scale" value="2" min="1" max="8" step="1" title="Škálování výstupu (DPI)">
+          </div>
+          <div class="row">
+            <label for="transparent" data-i18n="transparentLabel">Průhledné pozadí</label>
+            <input type="checkbox" id="transparent" checked>
+            <input type="color" id="bgColor" value="#ffffff" title="Barva pozadí PNG" style="display:none">
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn" id="exportPNG" data-i18n="exportPNG">Export PNG</button>
+            <button class="btn" id="exportHTML" data-i18n="exportHTML">Export HTML (CSS + tabulka)</button>
+            <button class="btn ghost" id="exportSVG" data-i18n="exportSVG">Export HTML (inline SVG)</button>
+          </div>
+          <p class="small" data-i18n="exportDesc">HTML export vloží vzorec jako HTML (KaTeX) do jednoduché tabulky 1×1; inline SVG export vloží vektorové SVG přímo do stránky.</p>
+        </div>
+      </div>
+      <footer class="small">© 2025 – <span data-i18n="footerText">funguje offline, vše v prohlížeči</span> · v1.7 · <span data-i18n="author">autor</span> PB.</footer>
+    </aside>
+
+    <section class="panel" aria-label="Editor a náhled">
+      <h2 data-i18n="editorTitle">Editor</h2>
+      <div id="topmenu" class="topmenu" role="toolbar" aria-label="Hlavní menu">
+        <details class="dropdown" id="greekDrop">
+          <summary data-i18n="greekAlphabet">Řecká abeceda ▾</summary>
+          <div class="dropdown-grid" id="greekGrid"></div>
+        </details>
+        <details class="dropdown" id="chemDrop">
+          <summary data-i18n="chemicalFormulas">Chemické vzorce ▾</summary>
+          <div class="dropdown-grid" id="chemGrid"></div>
+        </details>
+        <details class="dropdown" id="physicsDrop">
+          <summary data-i18n="physicsFormulas">Fyzikální vzorce ▾</summary>
+          <div class="dropdown-grid" id="physicsGrid"></div>
+        </details>
+        <details class="dropdown" id="electroDrop">
+          <summary data-i18n="electricalFormulas">Elektrotechnické ▾</summary>
+          <div class="dropdown-grid" id="electroGrid"></div>
+        </details>
+        <details class="dropdown" id="commonDrop">
+          <summary data-i18n="commonSymbols">Časté ▾</summary>
+          <div class="dropdown-grid" id="commonGrid"></div>
+        </details>
+      </div>
+      <div class="toolbar" id="toolbar"></div>
+      <div class="content editor">
+        <div class="left">
+          <textarea id="latex" spellcheck="false" placeholder="" data-i18n-placeholder="latexPlaceholder">\int_{a}^{b} f(x) \, dx = F(b) - F(a)</textarea>
+          <div class="notice" data-i18n="previewNotice">Náhled je vpravo. Můžeš také vložit LaTeX ze schránky (Ctrl/Cmd+V). Přetahování z palety vloží šablonu na kurzor.</div>
+        </div>
+        <div class="right" style="flex:1">
+          <div class="preview" id="preview" aria-live="polite">
+            <div class="msg" data-i18n="previewMessage">Sem se vykreslí náhled…</div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <label for="displayMode" data-i18n="displayModeLabel">Zobrazení</label>
+            <select id="displayMode">
+              <option value="true" selected data-i18n="displayModeDisplay">Display (větší)</option>
+              <option value="false" data-i18n="displayModeInline">Inline</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.MathJax = {
+      loader: { load: ['input/tex', 'output/svg'] },
+      svg: { fontCache: 'local' },
+      startup: { typeset: false }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/startup.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="translations.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
