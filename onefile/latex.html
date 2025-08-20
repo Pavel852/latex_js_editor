@@ -1,0 +1,912 @@
+<!doctype html>
+<!-- Version 1.7 · Author PB · Updated: 2025-08-21 -->
+<html lang="cs" data-theme="light" data-lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="version" content="1.7" />
+  <meta name="author" content="PB" />
+  <title>LaTeX Builder – editor vzorců</title>
+  <!-- KaTeX CSS (použito pro export HTML s CSS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <style>
+    :root[data-theme="light"] {
+      --bg:#f7f9fc; --fg:#10151c; --muted:#5b6570; --card:#ffffff; --accent:#2a66ff; --border:#dbe1ea;
+      --theme: 'light';
+    }
+    :root[data-theme="dark"]{
+      --bg: #0b0d12;
+      --fg: #e8ecf1;
+      --muted:#9aa4af;
+      --card:#121722;
+      --accent:#4f8dff;
+      --border:#222a39;
+      --theme: 'dark';
+    }
+    *{ box-sizing: border-box }
+    html, body { height: 100% }
+    body{
+      margin:0; font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg); color: var(--fg);
+      transition: background-color 0.3s, color 0.3s;
+    }
+    header{ display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,var(--card),transparent); position:sticky; top:0; z-index:5 }
+    header h1{ font-size:18px; margin:0; letter-spacing:.2px }
+    header .actions{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap }
+    .btn{ appearance:none; border:1px solid var(--border); background:var(--card); color:var(--fg); padding:8px 10px; border-radius:12px; cursor:pointer; transition:.15s ease; font-weight:600 }
+    .btn:hover{ border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent) }
+    .btn.ghost{ background:transparent }
+    .btn[disabled]{ opacity:.5; cursor:not-allowed }
+
+    .wrap{ display:grid; grid-template-columns: 320px 1fr; gap:16px; padding:16px; }
+    .panel{ background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:clip }
+    .panel h2{ margin:0; padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; letter-spacing:.3px; color:var(--muted); text-transform:uppercase }
+    .panel .content{ padding:12px }
+
+    .palette{ display:grid; grid-template-columns: repeat(3, 1fr); gap:8px }
+    .token{ user-select:none; text-align:center; padding:8px; border:1px dashed var(--border); border-radius:12px; background: color-mix(in oklab, var(--card) 85%, var(--fg) 3%);
+      cursor:grab; transition:.15s; font-size:13px }
+    .token:hover{ border-color:var(--accent) }
+    .token:active{ cursor:grabbing }
+
+    .editor{ display:flex; gap:16px; align-items:flex-start; }
+    .editor .left{ flex:1; min-width:260px; display:flex; flex-direction:column; gap:10px }
+    .toolbar{ display:flex; flex-wrap:wrap; gap:8px }
+    .toolbar .btn{ padding:6px 8px; font-size:13px }
+
+    textarea#latex{ width:100%; min-height:220px; resize:vertical; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:12px; padding:12px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    .preview{ width:100%; min-height:220px; border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; align-items:center; justify-content:center; background: var(--card); color:var(--fg); }
+    .preview .msg{ color:var(--muted); font-size:13px }
+
+    .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px }
+
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+    label{ color: var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.3px }
+    input[type="text"], input[type="number"], input[type="color"], select{
+      background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:10px; padding:7px 9px; font: inherit
+    }
+    .small{ font-size:12px; color:var(--muted) }
+    .notice{ background: color-mix(in oklab, var(--accent) 14%, transparent); border-left:3px solid var(--accent); padding:10px 12px; border-radius:10px; font-size:12px }
+
+    .sidebar{ display:flex; flex-direction:column; gap:16px }
+
+    footer{ padding:12px 16px; color:var(--muted) }
+  
+    .topmenu{ display:flex; gap:8px; align-items:center; margin:6px 0 10px 0; flex-wrap:wrap }
+    details.dropdown{ position:relative }
+    details.dropdown > summary{ list-style:none; cursor:pointer; padding:6px 8px; border:1px solid var(--border); border-radius:10px; background: var(--card) }
+    details.dropdown[open] > summary{ outline:1px dashed var(--accent) }
+    details.dropdown .dropdown-grid{ position:absolute; z-index:99; top:110%; left:0; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px; display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; max-width:700px; box-shadow: 0 10px 30px rgba(0,0,0,.3) }
+    .dropdown-grid .gk{ user-select:none; text-align:center; padding:12px 8px; border:1px solid var(--border); border-radius:10px; background: color-mix(in oklab, var(--card) 85%, var(--fg) 3%); cursor:pointer; min-width: 120px; min-height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .dropdown-grid .gk:hover{ border-color: var(--accent) }
+    
+    /* Nové styly pro chemické, fyzikální a elektrotechnické vzorce */
+    #chemGrid, #physicsGrid, #electroGrid { 
+      grid-template-columns: repeat(3, 1fr) !important; 
+      max-width: 700px !important;
+    }
+    
+    /* Styly pro řeckou abecedu - menší tlačítka */
+    #greekGrid {
+      grid-template-columns: repeat(6, 1fr) !important;
+      max-width: 500px !important;
+    }
+    #greekGrid .gk {
+      padding: 6px 4px !important;
+      min-width: 50px !important;
+      min-height: 40px !important;
+      font-size: 16px;
+    }
+    
+    /* Tlačítko pro změnu motivu a jazyka */
+    #themeToggle, #languageToggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 20px;
+    }
+    
+    .chem-symbol {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .chem-name {
+      font-size: 12px;
+      opacity: 0.8;
+      line-height: 1.2;
+    }
+</style>
+
+  <!-- MathJax (SVG výstup) pro náhled a export do PNG -->
+  <script>
+    // MathJax konfigurace – renderujeme programově do SVG
+    window.MathJax = {
+      loader: { load: ['input/tex', 'output/svg'] },
+      svg: { fontCache: 'local' },
+      startup: { typeset: false }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/startup.js"></script>
+  <!-- KaTeX (pro export HTML s CSS; v aplikaci nerenederujeme náhled KaTeXem) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1 data-i18n="appTitle">LaTeX Builder <span class="small" style="font-weight:400;color:var(--muted)">v1.7 · PB</span></h1>
+    <div class="actions">
+      <button class="btn" id="copyLatex" data-i18n="copyLatex">Kopírovat LaTeX</button>
+      <button class="btn ghost" id="clear" data-i18n="clear">Vymazat</button>
+      <button class="btn" id="languageToggle" type="button">EN</button>
+      <button class="btn" id="themeToggle" type="button">🌙</button>
+      <button class="btn" id="btnAbout" type="button" data-i18n="about">About</button>
+      <button class="btn" id="btnLoad" type="button" data-i18n="load">Load (.json)</button>
+      <button class="btn" id="btnSave" type="button" data-i18n="save">Save (.json)</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Levý sloupec: paleta -->
+    <aside class="panel sidebar" aria-label="Paleta prvků">
+      <div>
+        <h2 data-i18n="paletteTitle">Paleta (táhni & pusť)</h2>
+        <div class="content">
+          <div class="palette" id="palette">
+            <!-- naplní se skriptem -->
+          </div>
+          <p class="small" style="margin-top:8px" data-i18n="paletteTip">Tip: přetáhni prvek do editoru nebo klikni pro vložení. Znak ◻ označuje místo pro dopsání.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="exportTitle">Export</h2>
+        <div class="content">
+          <div class="row">
+            <label for="scale" data-i18n="scaleLabel">Měřítko PNG</label>
+            <input type="number" id="scale" value="2" min="1" max="8" step="1" title="Škálování výstupu (DPI)">
+          </div>
+          <div class="row">
+            <label for="transparent" data-i18n="transparentLabel">Průhledné pozadí</label>
+            <input type="checkbox" id="transparent" checked>
+            <input type="color" id="bgColor" value="#ffffff" title="Barva pozadí PNG" style="display:none">
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn" id="exportPNG" data-i18n="exportPNG">Export PNG</button>
+            <button class="btn" id="exportHTML" data-i18n="exportHTML">Export HTML (CSS + tabulka)</button>
+            <button class="btn ghost" id="exportSVG" data-i18n="exportSVG">Export HTML (inline SVG)</button>
+          </div>
+          <p class="small" data-i18n="exportDesc">HTML export vloží vzorec jako HTML (KaTeX) do jednoduché tabulky 1×1; inline SVG export vloží vektorové SVG přímo do stránky.</p>
+        </div>
+      </div>
+      <footer class="small">© 2025 – <span data-i18n="footerText">funguje offline, vše v prohlížeči</span> · v1.7 · <span data-i18n="author">autor</span> PB.</footer>
+    </aside>
+
+    <!-- Pravý sloupec: editor + náhled -->
+    <section class="panel" aria-label="Editor a náhled">
+      <h2 data-i18n="editorTitle">Editor</h2>
+      <div id="topmenu" class="topmenu" role="toolbar" aria-label="Hlavní menu">
+        <details class="dropdown" id="greekDrop">
+          <summary data-i18n="greekAlphabet">Řecká abeceda ▾</summary>
+          <div class="dropdown-grid" id="greekGrid"></div>
+        </details>
+        <details class="dropdown" id="chemDrop">
+          <summary data-i18n="chemicalFormulas">Chemické vzorce ▾</summary>
+          <div class="dropdown-grid" id="chemGrid"></div>
+        </details>
+        <details class="dropdown" id="physicsDrop">
+          <summary data-i18n="physicsFormulas">Fyzikální vzorce ▾</summary>
+          <div class="dropdown-grid" id="physicsGrid"></div>
+        </details>
+        <details class="dropdown" id="electroDrop">
+          <summary data-i18n="electricalFormulas">Elektrotechnické ▾</summary>
+          <div class="dropdown-grid" id="electroGrid"></div>
+        </details>
+        <details class="dropdown" id="commonDrop">
+          <summary data-i18n="commonSymbols">Časté ▾</summary>
+          <div class="dropdown-grid" id="commonGrid"></div>
+        </details>
+      </div>
+      <div class="toolbar" id="toolbar"></div><div class="content editor">
+        <div class="left"><textarea id="latex" spellcheck="false" placeholder="" data-i18n-placeholder="latexPlaceholder">\\int_{a}^{b} f(x) \\, dx = F(b) - F(a)</textarea>
+          <div class="notice" data-i18n="previewNotice">Náhled je vpravo. Můžeš také vložit LaTeX ze schránky (Ctrl/Cmd+V). Přetahování z palety vloží šablonu na kurzor.</div>
+        </div>
+        <div class="right" style="flex:1">
+          <div class="preview" id="preview" aria-live="polite">
+            <div class="msg" data-i18n="previewMessage">Sem se vykreslí náhled…</div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <label for="displayMode" data-i18n="displayModeLabel">Zobrazení</label>
+            <select id="displayMode">
+              <option value="true" selected data-i18n="displayModeDisplay">Display (větší)</option>
+              <option value="false" data-i18n="displayModeInline">Inline</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // --- Jazykové překlady ---
+    const translations = {
+      cs: {
+        appTitle: "LaTeX Builder",
+        copyLatex: "Kopírovat LaTeX",
+        clear: "Vymazat",
+        about: "About",
+        load: "Load (.json)",
+        save: "Save (.json)",
+        paletteTitle: "Paleta (táhni & pusť)",
+        paletteTip: "Tip: přetáhni prvek do editoru nebo klikni pro vložení. Znak ◻ označuje místo pro dopsání.",
+        exportTitle: "Export",
+        scaleLabel: "Měřítko PNG",
+        transparentLabel: "Průhledné pozadí",
+        exportPNG: "Export PNG",
+        exportHTML: "Export HTML (CSS + tabulka)",
+        exportSVG: "Export HTML (inline SVG)",
+        exportDesc: "HTML export vloží vzorec jako HTML (KaTeX) do jednoduché tabulky 1×1; inline SVG export vloží vektorové SVG přímo do stránky.",
+        footerText: "funguje offline, vše v prohlížeči",
+        author: "autor",
+        editorTitle: "Editor",
+        greekAlphabet: "Řecká abeceda ▾",
+        chemicalFormulas: "Chemické vzorce ▾",
+        physicsFormulas: "Fyzikální vzorce ▾",
+        electricalFormulas: "Elektrotechnické ▾",
+        commonSymbols: "Časté ▾",
+        latexPlaceholder: "Zadej LaTeX, nebo použij paletu...",
+        previewNotice: "Náhled je vpravo. Můžeš také vložit LaTeX ze schránky (Ctrl/Cmd+V). Přetahování z palety vloží šablonu na kurzor.",
+        displayModeLabel: "Zobrazení",
+        displayModeDisplay: "Display (větší)",
+        displayModeInline: "Inline",
+        previewMessage: "Sem se vykreslí náhled…"
+      },
+      en: {
+        appTitle: "LaTeX Builder",
+        copyLatex: "Copy LaTeX",
+        clear: "Clear",
+        about: "About",
+        load: "Load (.json)",
+        save: "Save (.json)",
+        paletteTitle: "Palette (drag & drop)",
+        paletteTip: "Tip: drag element to editor or click to insert. The ◻ character indicates a place to fill in.",
+        exportTitle: "Export",
+        scaleLabel: "PNG Scale",
+        transparentLabel: "Transparent background",
+        exportPNG: "Export PNG",
+        exportHTML: "Export HTML (CSS + table)",
+        exportSVG: "Export HTML (inline SVG)",
+        exportDesc: "HTML export inserts the formula as HTML (KaTeX) into a simple 1×1 table; inline SVG export inserts vector SVG directly into the page.",
+        footerText: "works offline, everything in browser",
+        author: "author",
+        editorTitle: "Editor",
+        greekAlphabet: "Greek alphabet ▾",
+        chemicalFormulas: "Chemical formulas ▾",
+        physicsFormulas: "Physics formulas ▾",
+        electricalFormulas: "Electrical formulas ▾",
+        commonSymbols: "Common ▾",
+        latexPlaceholder: "Enter LaTeX, or use the palette...",
+        previewNotice: "Preview is on the right. You can also paste LaTeX from clipboard (Ctrl/Cmd+V). Dragging from the palette inserts a template at the cursor.",
+        displayModeLabel: "Display mode",
+        displayModeDisplay: "Display (larger)",
+        displayModeInline: "Inline",
+        previewMessage: "Preview will be rendered here…"
+      }
+    };
+
+    // Funkce pro změnu jazyka
+    function setLanguage(lang) {
+      document.documentElement.setAttribute('data-lang', lang);
+      localStorage.setItem('latex-builder-language', lang);
+      
+      // Aktualizace všech elementů s data-i18n atributem
+      document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        if (translations[lang][key]) {
+          element.textContent = translations[lang][key];
+        }
+      });
+      
+      // Aktualizace placeholderů
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        if (translations[lang][key]) {
+          element.setAttribute('placeholder', translations[lang][key]);
+        }
+      });
+      
+      // Aktualizace textu tlačítka pro přepnutí jazyka
+      document.getElementById('languageToggle').textContent = lang === 'cs' ? 'EN' : 'CZ';
+      
+      // Aktualizace option elementů v selectu
+      const displayModeSelect = document.getElementById('displayMode');
+      if (displayModeSelect) {
+        for (let i = 0; i < displayModeSelect.options.length; i++) {
+          const option = displayModeSelect.options[i];
+          if (option.hasAttribute('data-i18n')) {
+            const key = option.getAttribute('data-i18n');
+            if (translations[lang][key]) {
+              option.textContent = translations[lang][key];
+            }
+          }
+        }
+      }
+    }
+
+    // --- Pomocné funkce ---
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+
+    function insertAtCursor(textarea, snippet){
+      const m = '◻';
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? textarea.value.length;
+      const before = textarea.value.slice(0, start);
+      const after = textarea.value.slice(end);
+      const posMark = snippet.indexOf(m);
+      const clean = snippet.replace(m, '');
+      textarea.value = before + clean + after;
+      const caret = start + (posMark >= 0 ? posMark : clean.length);
+      textarea.selectionStart = textarea.selectionEnd = caret;
+      textarea.focus();
+      textarea.dispatchEvent(new Event('input', {bubbles:true}));
+    }
+
+    // --- Paleta & toolbar ---
+    const PALETTE = [
+      { label: 'zlomek', s: '\\frac{◻}{ }' },
+      { label: 'odmocnina', s: '\\sqrt{◻}' },
+      { label: 'n-tá odm.', s: '\\sqrt[◻]{ }' },
+      { label: 'mocnina', s: '^{◻}' },
+      { label: 'index', s: '_{◻}' },
+      { label: 'součet', s: '\\sum_{i=◻}^{n} ' },
+      { label: 'součin', s: '\\prod_{i=◻}^{n} ' },
+      { label: 'integrál', s: '\\int_{a}^{b} ◻\\, dx' },
+      { label: 'limita', s: '\\lim_{x \\to ◻} ' },
+      { label: 'matice 2×2', s: '\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}' },
+      { label: '(', s: '\\left( ◻ \\right)' },
+      { label: '[', s: '\\left[ ◻ \\right]' },
+      { label: '| |', s: '\\left| ◻ \\right|' },
+      { label: '≈', s: '\\approx ' },
+      { label: '≠', s: '\\neq ' },
+      { label: '≤', s: '\\leq ' },
+      { label: '≥', s: '\\geq ' },
+      { label: '⋅', s: '\\cdot ' },
+      { label: '×', s: '\\times ' },
+      { label: '→', s: '\\to ' },
+      { label: 'ℝ', s: '\\mathbb{R} ' },
+      { label: 'ℕ', s: '\\mathbb{N} ' },
+      { label: 'α', s: '\\alpha ' },
+      { label: 'β', s: '\\beta ' },
+      { label: 'γ', s: '\\gamma ' },
+      { label: 'θ', s: '\\theta ' },
+      { label: 'λ', s: '\\lambda ' },
+      { label: 'π', s: '\\pi ' },
+      { label: 'sin', s: '\\sin ' },
+      { label: 'cos', s: '\\cos ' },
+      { label: 'tan', s: '\\tan ' },
+    ];
+
+    function buildPalette(){
+      const pal = $('#palette');
+      pal.innerHTML = '';
+      PALETTE.forEach(({label, s}) => {
+        const el = document.createElement('div');
+        el.className = 'token';
+        el.textContent = label;
+        el.setAttribute('draggable', 'true');
+        el.title = s;
+        el.addEventListener('dragstart', ev => {
+          ev.dataTransfer.setData('text/plain', s);
+        });
+        el.addEventListener('click', () => insertAtCursor($('#latex'), s));
+        pal.appendChild(el);
+      });
+    }
+
+    function buildToolbar(){
+      const TB = [
+        { t: 'Zlomek', s: '\\frac{◻}{ }' },
+        { t: '√', s: '\\sqrt{◻}' },
+        { t: 'n√', s: '\\sqrt[◻]{ }' },
+        { t: 'a^b', s: '^{◻}' },
+        { t: 'a_b', s: '_{◻}' },
+        { t: '∑', s: '\\sum_{i=◻}^{n} ' },
+        { t: '∏', s: '\\prod_{i=◻}^{n} ' },
+        { t: '∫', s: '\\int_{a}^{b} ◻\\, dx' },
+        { t: '( )', s: '\\left( ◻ \\right)' },
+        { t: '[ ]', s: '\\left[ ◻ \\right]' },
+        { t: '| |', s: '\\left| ◻ \\right|' },
+        { t: '+', s: '+ ' },
+        { t: '−', s: '- ' },
+        { t: '⋅', s: '\\cdot ' },
+        { t: '×', s: '\\times ' },
+        { t: '÷', s: '\\div ' },
+        { t: '=', s: '= ' },
+        { t: '≈', s: '\\approx ' },
+        { t: '≠', s: '\\neq ' },
+        { t: '≤', s: '\\leq ' },
+        { t: '≥', s: '\\geq ' },        { t: 'sin', s: '\\sin ' },
+        { t: 'cos', s: '\\cos ' },
+        { t: 'tan', s: '\\tan ' },
+        { t: 'VZOR', s: '__VZOR__' },
+      ];
+      const tb = $('#toolbar');
+      TB.forEach(({t,s}) => {
+        const b = document.createElement('button');
+        b.className = 'btn'; b.type='button'; b.textContent = t; b.title=s;
+        b.addEventListener('click', () => {
+        if(s === '__VZOR__') insertSample();
+        else insertAtCursor($('#latex'), s);
+      });
+        tb.appendChild(b);
+      });
+    }
+
+    // --- Drag&drop do textarea ---
+    function enableDnd(){
+      const ta = $('#latex');
+      ta.addEventListener('dragover', ev => ev.preventDefault());
+      ta.addEventListener('drop', ev => {
+        ev.preventDefault();
+        const data = ev.dataTransfer.getData('text/plain');
+        if (data) insertAtCursor(ta, data);
+      });
+    }
+
+    // --- Náhled (MathJax SVG) ---
+    async function renderPreview(){
+      const latex = $('#latex').value;
+      const display = $('#displayMode').value === 'true';
+      const preview = $('#preview');
+      preview.innerHTML = '';
+      try{
+        await MathJax.startup.promise; // zajistí inicializaci
+        const svg = await MathJax.tex2svgPromise(latex, {display});
+        svg.style.maxWidth = '100%';
+        svg.style.height = 'auto';
+        preview.appendChild(svg);
+      }catch(err){
+        const pre = document.createElement('pre');
+        pre.textContent = 'Chyba při vykreslení: ' + err?.message;
+        pre.style.color = 'crimson'; pre.style.whiteSpace='pre-wrap';
+        preview.appendChild(pre);
+      }
+    }
+
+    // --- Export PNG z SVG náhledu ---
+    function exportPNG(){
+      const preview = $('#preview');
+      const svg = preview.querySelector('svg');
+      if(!svg){ alert('Nejdřív vygeneruj náhled.'); return; }
+      const scale = Math.max(1, Math.min(8, parseInt($('#scale').value || '2', 10)));
+      const transparent = $('#transparent').checked;
+      const bg = $('#bgColor').value;
+
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const svgBlob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
+      const url = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const w = img.width * scale, h = img.height * scale;
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if(!transparent){
+          ctx.fillStyle = bg; ctx.fillRect(0,0,w,h);
+        } else {
+          ctx.clearRect(0,0,w,h);
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(blob => {
+          const a = document.createElement('a');
+          a.download = 'vzorec.png';
+          a.href = URL.createObjectURL(blob);
+          a.click();
+          setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+        }, 'image/png');
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); alert('Export selhal.'); };
+      img.src = url;
+    }
+
+    // --- Export HTML (KaTeX + tabulka) ---
+    function exportHTML(){
+      const latex = $('#latex').value;
+      let html = '';
+      try{
+        html = katex.renderToString(latex, { throwOnError:false, displayMode: true, output:'html' });
+      }catch(err){
+        alert('Chyba při převodu KaTeX: '+ err?.message);
+        return;
+      }
+      const doc = `<!doctype html>
+<!-- Version 1.7 · Author PB · Updated: 2025-08-21 -->\n<html lang="cs">\n<head>\n<meta charset="utf-8">
+<meta name="version" content="1.7">
+<meta name="author" content="PB">\n<title>Vzorový vzorec (jednořádkový)</title>\n<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">\n<style>body{font:16px/1.4 system-ui,Segoe UI,Roboto; padding:24px} table{border-collapse:collapse} td{padding:8px;white-space:nowrap} .katex{white-space:nowrap} .katex-display{display:inline-block;margin:0;white-space:nowrap}</style>\n</head>\n<body>\n<table><tr><td>${html}</td></tr></table>\n</body></html>`;
+      const blob = new Blob([doc], {type:'text/html;charset=utf-8'});
+      const a = document.createElement('a');
+      a.download = 'vzorec.html';
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+    }
+
+    // --- Export inline SVG HTML ---
+    function exportSVG(){
+      const svg = $('#preview').querySelector('svg');
+      if(!svg){ alert('Nejdřív vygeneruj náhled.'); return; }
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const doc = `<!doctype html>
+<!-- Version 1.7 · Author PB · Updated: 2025-08-21 -->\n<html lang="cs">\n<head><meta charset=\"utf-8\"><title>Vzorový vzorec (SVG)</title><style>body{display:grid;place-items:center;height:100svh;margin:0;background:#fff}</style></head>\n<body>${svgStr}</body></html>`;
+      const blob = new Blob([doc], {type:'text/html;charset=utf-8'});
+      const a = document.createElement('a');
+      a.download = 'vzorec_svg.html';
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+    }
+
+    // --- Ovládání ---
+    function bindUI(){
+      $('#latex').addEventListener('input', renderPreview);
+      $('#displayMode').addEventListener('change', renderPreview);
+      $('#copyLatex').addEventListener('click', async () => {
+        try{ await navigator.clipboard.writeText($('#latex').value); }catch{}
+      });
+      $('#clear').addEventListener('click', () => { $('#latex').value=''; renderPreview(); });
+      $('#exportPNG').addEventListener('click', exportPNG);
+      $('#exportHTML').addEventListener('click', exportHTML);
+      $('#exportSVG').addEventListener('click', exportSVG);
+      $('#transparent').addEventListener('change', (e)=>{
+        $('#bgColor').style.display = e.target.checked ? 'none' : 'inline-block';
+      });
+
+      // jednoduché uložení do localStorage
+      const KEY='latex-builder-last';
+      const saved = localStorage.getItem(KEY);
+      if(saved){ $('#latex').value = saved; }
+      $('#latex').addEventListener('input', ()=> localStorage.setItem(KEY, $('#latex').value));
+      
+      // přepínání motivu
+      $('#themeToggle').addEventListener('click', toggleTheme);
+      
+      // přepínání jazyka
+      $('#languageToggle').addEventListener('click', toggleLanguage);
+      
+      // inicializace motivu a jazyka
+      initTheme();
+      initLanguage();
+    }
+
+    // --- Přepínání motivu ---
+    function initTheme() {
+      const savedTheme = localStorage.getItem('latex-builder-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeButton(savedTheme);
+    }
+    
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('latex-builder-theme', newTheme);
+      updateThemeButton(newTheme);
+    }
+    
+    function updateThemeButton(theme) {
+      const button = $('#themeToggle');
+      button.textContent = theme === 'dark' ? '🌙' : '☀️';
+    }
+    
+    // --- Přepínání jazyka ---
+    function initLanguage() {
+      const savedLang = localStorage.getItem('latex-builder-language') || 'cs';
+      setLanguage(savedLang);
+    }
+    
+    function toggleLanguage() {
+      const currentLang = document.documentElement.getAttribute('data-lang') || 'cs';
+      const newLang = currentLang === 'cs' ? 'en' : 'cs';
+      setLanguage(newLang);
+    }
+    
+    function insertSample(){
+      const ex = [
+        '% Ukázkový vzorec',
+        '\\begin{align}',
+        '  F(\\alpha,\\beta) \\ &= \\sum_{i=1}^{n} \\frac{ \\alpha_i \\cdot x_i^{2} + \\beta_i \\cdot y_i }{ \\sqrt{ \\delta + x_i^{2} + y_i^{2} } } \\cdot \\sin(\\theta_i) \\\\',
+        '  \\text{kde } \\; (x_i,y_i) \\in \\mathbb{R}^2, \\; \\lambda>0, \\; \\theta_i \\in [0,\\pi]',
+        '\\end{align}'
+      ].join('\n');
+      const ta = document.querySelector('#latex');
+      ta.value = ex;
+      ta.selectionStart = ta.selectionEnd = ta.value.length;
+      ta.dispatchEvent(new Event('input', {bubbles:true}));
+      ta.focus();
+    }
+    
+    
+    function buildGreekDropdown(){
+      const letters = [
+        // Lowercase
+        ['α','\\alpha '], ['β','\\beta '], ['γ','\\gamma '], ['δ','\\delta '], ['ε','\\epsilon '], ['ζ','\\zeta '], ['η','\\eta '], ['θ','\\theta '], ['ι','\\iota '], ['κ','\\kappa '], ['λ','\\lambda '], ['μ','\\mu '], ['ν','\\nu '], ['ξ','\\xi '], ['ο','o'], ['π','\\pi '], ['ρ','\\rho '], ['σ','\\sigma '], ['τ','\\tau '], ['υ','\\upsilon '], ['φ','\\phi '], ['χ','\\chi '], ['ψ','\\psi '], ['ω','\\omega '],
+        // Uppercase
+        ['Α','A'], ['Β','B'], ['Γ','\\Gamma '], ['Δ','\\Delta '], ['Ε','E'], ['Ζ','Z'], ['Η','H'], ['Θ','\\Theta '], ['Ι','I'], ['Κ','K'], ['Λ','\\Lambda '], ['Μ','M'], ['Ν','N'], ['Ξ','\\Xi '], ['Ο','O'], ['Π','\\Pi '], ['Ρ','P'], ['Σ','\\Sigma '], ['Τ','T'], ['Υ','\\Upsilon '], ['Φ','\\Phi '], ['Χ','X'], ['Ψ','\\Psi '], ['Ω','\\Omega ']
+      ];
+      const grid = document.querySelector('#greekGrid');
+      if(!grid) return;
+      grid.innerHTML='';
+      letters.forEach(([label, s]) => {
+        const el = document.createElement('div');
+        el.className='gk';
+        el.textContent=label;
+        el.title=s;
+        el.addEventListener('click', () => insertAtCursor(document.querySelector('#latex'), s));
+        grid.appendChild(el);
+      });
+    }
+
+    
+    function openAbout(){
+      const currentLang = document.documentElement.getAttribute('data-lang') || 'cs';
+      let info;
+      
+      if (currentLang === 'cs') {
+        info = [
+          'LaTeX Builder — v1.7 (PB)',
+          'Funguje offline — náhled (MathJax), export PNG/HTML/SVG.',
+          'Novinky v1.7:',
+          '- Vylepšené zobrazení řecké abecedy',
+          '- Přepínání češtiny/angličtiny',
+          '- Výchozí světlý režim',
+          '- Přepínání tmavého/světlého režimu'
+        ].join('\n');
+      } else {
+        info = [
+          'LaTeX Builder — v1.7 (PB)',
+          'Works offline — preview (MathJax), export PNG/HTML/SVG.',
+          'New in v1.7:',
+          '- Improved Greek alphabet display',
+          '- Czech/English language switching',
+          '- Default light theme',
+          '- Dark/light theme switching'
+        ].join('\n');
+      }
+      
+      alert(info);
+    }
+    function saveJSON(){
+      const data = {
+        version: '1.7',
+        latex: document.querySelector('#latex').value,
+        displayMode: document.querySelector('#displayMode').value === 'true'
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'latex_builder_v1.7.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 100);
+    }
+    function loadJSON(){
+      const inp = document.createElement('input');
+      inp.type='file';
+      inp.accept='application/json';
+      inp.onchange = async (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        try{
+          const text = await file.text();
+          const obj = JSON.parse(text);
+          if(typeof obj.latex === 'string'){
+            const ta = document.querySelector('#latex');
+            ta.value = obj.latex;
+            ta.dispatchEvent(new Event('input', {bubbles:true}));
+          }
+          if(typeof obj.displayMode === 'boolean'){
+            document.querySelector('#displayMode').value = String(obj.displayMode);
+            document.querySelector('#displayMode').dispatchEvent(new Event('change', {bubbles:true}));
+          }
+          alert('Načteno.');
+        }catch(err){
+          alert('Nepodařilo se načíst JSON: ' + err.message);
+        }
+      };
+      inp.click();
+    }
+
+    
+    function buildChemDropdown(){
+      const items = [
+        ['H₂O','\\mathrm{H_2O}','voda'],
+        ['NaCl','\\mathrm{NaCl}','sůl'],
+        ['CO₂','\\mathrm{CO_2}','oxid uhličitý'],
+        ['H₂SO₄','\\mathrm{H_2SO_4}','kys. sírová'],
+        ['HNO₃','\\mathrm{HNO_3}','kys. dusičná'],
+        ['HCl','\\mathrm{HCl}','kys. chlorovodíková'],
+        ['NaOH','\\mathrm{NaOH}','hydroxid sodný'],
+        ['NH₃','\\mathrm{NH_3}','amoniak'],
+        ['CaCO₃','\\mathrm{CaCO_3}','uhličitan vápenatý'],
+        ['C₆H₁₂O₆','\\mathrm{C_6H_{12}O_6}','glukóza'],
+        ['C₂H₅OH','\\mathrm{C_2H_5OH}','etanol'],
+        ['CH₃COOH','\\mathrm{CH_3COOH}','kys. octová']
+      ];
+      const grid = document.querySelector('#chemGrid');
+      if(!grid) return;
+      grid.innerHTML='';
+      items.forEach(([symbol, s, fullName]) => {
+        const el = document.createElement('div');
+        el.className='gk';
+        
+        const symbolDiv = document.createElement('div');
+        symbolDiv.className = 'chem-symbol';
+        symbolDiv.textContent = symbol;
+        
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'chem-name';
+        nameDiv.textContent = fullName;
+        
+        el.appendChild(symbolDiv);
+        el.appendChild(nameDiv);
+        
+        el.title = `${fullName} (${s})`;
+        el.addEventListener('click', () => insertAtCursor(document.querySelector('#latex'), s + ' '));
+        grid.appendChild(el);
+      });
+    }
+    
+    function buildPhysicsDropdown() {
+      const items = [
+        ['F = ma', 'F = m a', '2. Newtonův zákon'],
+        ['E = mc²', 'E = m c^2', 'Rovnice energie'],
+        ['F = G(m₁m₂)/r²', 'F = G \\frac{m_1 m_2}{r^2}', 'Gravitační zákon'],
+        ['p = mv', 'p = m v', 'Hybnost'],
+        ['W = Fs', 'W = F s', 'Práce'],
+        ['P = W/t', 'P = \\frac{W}{t}', 'Výkon'],
+        ['E = ½mv²', 'E = \\frac{1}{2} m v^2', 'Kinetická energie'],
+        ['F = kx', 'F = k x', 'Hookův zákon'],
+        ['v = λf', 'v = \\lambda f', 'Vlnová rovnice'],
+        ['P = IV', 'P = I V', 'Elektrický výkon'],
+        ['V = IR', 'V = I R', 'Ohmův zákon'],
+        ['F = qE', 'F = q E', 'Elektrická síla'],
+        ['F = qvB', 'F = q v B', 'Magnetická síla'],
+        ['E = hf', 'E = h f', 'Energie fotonu'],
+        ['λ = h/p', '\\lambda = \\frac{h}{p}', 'De Broglie vlna'],
+        ['ΔxΔp ≥ ħ/2', '\\Delta x \\Delta p \\geq \\frac{\\hbar}{2}', 'Princip neurčitosti'],
+        ['S = k ln Ω', 'S = k \\ln \\Omega', 'Boltzmannova entropie'],
+        ['PV = nRT', 'P V = n R T', 'Stavová rovnice'],
+        ['F = σAΔT⁴', 'P = \\sigma A T^4', 'Stefan-Boltzmannův zákon'],
+        ['1/f = 1/u + 1/v', '\\frac{1}{f} = \\frac{1}{u} + \\frac{1}{v}', 'Zobrazovací rovnice']
+      ];
+      const grid = document.querySelector('#physicsGrid');
+      if(!grid) return;
+      grid.innerHTML='';
+      items.forEach(([symbol, s, fullName]) => {
+        const el = document.createElement('div');
+        el.className='gk';
+        
+        const symbolDiv = document.createElement('div');
+        symbolDiv.className = 'chem-symbol';
+        symbolDiv.textContent = symbol;
+        
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'chem-name';
+        nameDiv.textContent = fullName;
+        
+        el.appendChild(symbolDiv);
+        el.appendChild(nameDiv);
+        
+        el.title = `${fullName} (${s})`;
+        el.addEventListener('click', () => insertAtCursor(document.querySelector('#latex'), s + ' '));
+        grid.appendChild(el);
+      });
+    }
+    
+    function buildElectroDropdown() {
+      const items = [
+        ['U = IR', 'U = I R', 'Ohmův zákon'],
+        ['P = UI', 'P = U I', 'Elektrický výkon'],
+        ['P = I²R', 'P = I^2 R', 'Jouleův zákon'],
+        ['W = UIt', 'W = U I t', 'Práce'],
+        ['C = Q/U', 'C = \\frac{Q}{U}', 'Kapacita'],
+        ['E = ½CU²', 'E = \\frac{1}{2} C U^2', 'Energie kondenzátoru'],
+        ['L = Φ/I', 'L = \\frac{\\Phi}{I}', 'Indukčnost'],
+        ['E = ½LI²', 'E = \\frac{1}{2} L I^2', 'Energie cívka'],
+        ['τ = RC', '\\tau = R C', 'Časová konstanta RC'],
+        ['τ = L/R', '\\tau = \\frac{L}{R}', 'Časová konstanta RL'],
+        ['f = 1/T', 'f = \\frac{1}{T}', 'Frekvence'],
+        ['ω = 2πf', '\\omega = 2\\pi f', 'Úhlová frekvence'],
+        ['X_C = 1/(ωC)', 'X_C = \\frac{1}{\\omega C}', 'Kapacitance'],
+        ['X_L = ωL', 'X_L = \\omega L', 'Induktance'],
+        ['Z = √(R²+X²)', 'Z = \\sqrt{R^2 + X^2}', 'Impedance'],
+        ['I = I₀sin(ωt)', 'I = I_0 \\sin(\\omega t)', 'Střídavý proud'],
+        ['U = U₀sin(ωt+φ)', 'U = U_0 \\sin(\\omega t + \\varphi)', 'Střídavé napětí'],
+        ['Φ = BAcosθ', '\\Phi = B A \\cos\\theta', 'Magnetický tok'],
+        ['F = BIlsinθ', 'F = B I l \\sin\\theta', 'Síla na vodič'],
+        ['ε = -dΦ/dt', '\\varepsilon = -\\frac{d\\Phi}{dt}', 'Faradayův zákon']
+      ];
+      const grid = document.querySelector('#electroGrid');
+      if(!grid) return;
+      grid.innerHTML='';
+      items.forEach(([symbol, s, fullName]) => {
+        const el = document.createElement('div');
+        el.className='gk';
+        
+        const symbolDiv = document.createElement('div');
+        symbolDiv.className = 'chem-symbol';
+        symbolDiv.textContent = symbol;
+        
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'chem-name';
+        nameDiv.textContent = fullName;
+        
+        el.appendChild(symbolDiv);
+        el.appendChild(nameDiv);
+        
+        el.title = `${fullName} (${s})`;
+        el.addEventListener('click', () => insertAtCursor(document.querySelector('#latex'), s + ' '));
+        grid.appendChild(el);
+      });
+    }
+    
+    function buildCommonDropdown(){
+      const items = [
+        ['→','\\rightarrow '],
+        ['←','\\leftarrow '],
+        ['⇒','\\Rightarrow '],
+        ['⇐','\\Leftarrow '],
+        ['↔','\\leftrightarrow '],
+        ['∞','\\infty '],
+        ['∠','\\angle '],
+        ['△','\\triangle '],
+        ['∂','\\partial '],
+        ['∇','\\nabla '],
+        ['·','\\cdot '],
+        ['×','\\times '],
+        ['±','\\pm ']
+      ];
+      const grid = document.querySelector('#commonGrid');
+      if(!grid) return;
+      grid.innerHTML='';
+      items.forEach(([symbol, s]) => {
+        const el = document.createElement('div');
+        el.className='gk';
+        el.textContent = symbol;
+        el.title = s;
+        el.addEventListener('click', () => insertAtCursor(document.querySelector('#latex'), s));
+        grid.appendChild(el);
+      });
+    }
+
+    // Init
+    window.addEventListener('DOMContentLoaded', () => {
+      buildPalette();
+      buildToolbar();
+      enableDnd();
+      bindUI();
+      renderPreview();
+    
+      // menu handlers
+      const $ = (s)=>document.querySelector(s);
+      $('#btnAbout')?.addEventListener('click', openAbout);
+      $('#btnSave')?.addEventListener('click', saveJSON);
+      $('#btnLoad')?.addEventListener('click', loadJSON);
+      buildGreekDropdown();
+    
+      buildChemDropdown();
+      buildPhysicsDropdown();
+      buildElectroDropdown();
+      buildCommonDropdown();
+    });
+  </script>
+</body>
+</html>
